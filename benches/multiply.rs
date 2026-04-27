@@ -1,4 +1,4 @@
-use bigint_mul_bench::{karatsuba, random_digits, schoolbook, toom3};
+use bigint_mul_bench::{karatsuba, random_digits_with_seed, schoolbook, toom3};
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 
 fn bench_multiply(c: &mut Criterion) {
@@ -7,8 +7,8 @@ fn bench_multiply(c: &mut Criterion) {
     let mut group = c.benchmark_group("multiply");
 
     for &size in &sizes {
-        let a = random_digits(size);
-        let b = random_digits(size);
+        let a = random_digits_with_seed(size, 42);
+        let b = random_digits_with_seed(size, 137);
 
         group.bench_with_input(BenchmarkId::new("schoolbook", size), &size, |bench, _| {
             bench.iter(|| schoolbook(&a, &b));

@@ -1,4 +1,5 @@
-use bigint_mul_bench::{karatsuba, random_digits, schoolbook, toom3};
+use bigint_mul_bench::{karatsuba, random_digits_with_seed, schoolbook, toom3};
+use std::hint::black_box;
 use std::time::Instant;
 
 fn main() {
@@ -11,13 +12,21 @@ fn main() {
     println!("{}", "-".repeat(88));
 
     for &size in &sizes {
-        let a = random_digits(size);
-        let b = random_digits(size);
+        // a と b に異なるシードを使い、同一値にならないようにする
+        let a = random_digits_with_seed(size, 42);
+        let b = random_digits_with_seed(size, 137);
 
-        // ウォームアップ
-        let _ = schoolbook(&a, &b);
-        let _ = karatsuba(&a, &b);
-        let _ = toom3(&a, &b);
+        // 3つのアルゴリズムの結果が一致することを確認（不一致ならバグ）
+        let s = schoolbook(&a, &b);
+        let k = karatsuba(&a, &b);
+        let t = toom3(&a, &b);
+        assert_eq!(s, k, "schoolbook != karatsuba at size {}", size);
+        assert_eq!(s, t, "schoolbook != toom3 at size {}", size);
+
+        // ウォームアップを兼ねる
+        black_box(&s);
+        black_box(&k);
+        black_box(&t);
 
         let iters = match size {
             n if n <= 100 => 1000,
@@ -26,21 +35,22 @@ fn main() {
             _ => 5,
         };
 
+        // black_box で結果を包み、コンパイラによるデッドコード除去を防ぐ
         let start = Instant::now();
         for _ in 0..iters {
-            let _ = schoolbook(&a, &b);
+            black_box(schoolbook(black_box(&a), black_box(&b)));
         }
         let school_time = start.elapsed().as_nanos() as f64 / iters as f64;
 
         let start = Instant::now();
         for _ in 0..iters {
-            let _ = karatsuba(&a, &b);
+            black_box(karatsuba(black_box(&a), black_box(&b)));
         }
         let kara_time = start.elapsed().as_nanos() as f64 / iters as f64;
 
         let start = Instant::now();
         for _ in 0..iters {
-            let _ = toom3(&a, &b);
+            black_box(toom3(black_box(&a), black_box(&b)));
         }
         let toom_time = start.elapsed().as_nanos() as f64 / iters as f64;
 
